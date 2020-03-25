@@ -9,13 +9,27 @@ interface fileResult {
 }
 interface oneDirReadResult_all {
   nowPath: string;
-  dir?: oneDirReadResult_all[];
-  file?: fileResult[];
+  dir: oneDirReadResult_all[];
+  file: fileResult[];
+}
+
+interface setting_getFile {
+  regExp: RegExp[];
+  fileType: string;
+  isGet: boolean
+}
+interface userSetting {
+  getFile: setting_getFile[]
 }
 
 class GetFolderStructure {
+  constructor(basePath: string, userSetting?: userSetting) {
+    this.basePath = basePath
+    this.userSetting = { ...this.userSetting, ...userSetting }
+  }
+
   private basePath: string;
-  getFile?: { regExp: RegExp[], fileType: string, isGet: boolean }[] = 
+  getFile: setting_getFile[] =
     [
       {
         fileType: 'video',
@@ -33,16 +47,14 @@ class GetFolderStructure {
         regExp: [/jp(e?)g$|gif$|png$/i]
       }
     ]
-  userSetting?: {
-    getFile?: {regExp: RegExp[], fileType: string, isGet: boolean}[]
-  } = {getFile : []}
+  userSetting: userSetting = { getFile: [] }
 
-  fileTypeCheck (fileName: string): {isGet: boolean, type: string} {
+  fileTypeCheck(fileName: string): { isGet: boolean, type: string } {
     let getFileSetting = [
-      ...(this.userSetting.getFile && this.userSetting.getFile),
+      ...this.userSetting.getFile,
       ...this.getFile
     ]
-    
+
     let result = {
       type: '',
       isGet: false
@@ -65,10 +77,10 @@ class GetFolderStructure {
     return result
   }
 
-  promise_readFolderStructure () {
-    const readdir = async (readPath: string): Promise<oneDirReadResult_all> => {
+  promise_readFolderStructure() {
+    const readdir = async (readPath: string, prevPath?: string) => {
       let listStrings: string[] = []
-      let result = {nowPath: readPath, dir: [], file: []}
+      let result: oneDirReadResult_all = { nowPath: readPath, dir: [], file: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -100,16 +112,6 @@ class GetFolderStructure {
 
     return readdir(this.basePath)
   }
-
-  constructor(
-    {basePath},
-    userSetting?
-  ) {
-    this.basePath = basePath
-    this.userSetting = {...this.userSetting, ...userSetting}
-  }
 }
 
-export {
-  GetFolderStructure
-}
+export default GetFolderStructure
