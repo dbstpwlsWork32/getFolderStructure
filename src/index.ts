@@ -11,6 +11,7 @@ interface oneDirReadResult_all {
   nowPath: string;
   dir: oneDirReadResult_all[];
   file: fileResult[];
+  existType: string[];
 }
 
 interface setting_getFile {
@@ -45,6 +46,11 @@ class GetFolderStructure {
         fileType: 'picture',
         isGet: true,
         regExp: [/jp(e?)g$|gif$|png$/i]
+      },
+      {
+        fileType: 'game',
+        isGet: true,
+        regExp: [/swf$|exe$/i]
       }
     ]
   userSetting: userSetting = { getFile: [] }
@@ -80,7 +86,7 @@ class GetFolderStructure {
   promise_readFolderStructure() {
     const readdir = async (readPath: string, prevPath?: string) => {
       let listStrings: string[] = []
-      let result: oneDirReadResult_all = { nowPath: readPath, dir: [], file: [] }
+      let result: oneDirReadResult_all = { nowPath: readPath, dir: [], file: [], existType: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -100,11 +106,14 @@ class GetFolderStructure {
           result.file.push(
             {
               fileName: listString,
-              fileType: this.fileTypeCheck(listString).type,
+              fileType: fileTypeResult.type,
               ctime: nowStat.ctime,
               mtime: nowStat.mtime,
             }
           )
+          if (!result.existType.includes(fileTypeResult.type)) {
+            result.existType.push(fileTypeResult.type)
+          }
         }
       }
       return result
