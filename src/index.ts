@@ -1,36 +1,37 @@
-import * as fs from "fs"
-import * as path from "path"
+/* eslint-disable */
 
-interface fileResult {
+import * as fs from 'fs'
+import * as path from 'path'
+interface FileResult {
   fileName: string;
   fileType: string;
   ctime: Date;
   mtime: Date;
 }
-interface oneDirReadResult_all {
+interface OneDirReadResultAll {
   nowPath: string;
-  dir: oneDirReadResult_all[];
-  file: fileResult[];
+  dir: OneDirReadResultAll[];
+  file: FileResult[];
   existType: string[];
 }
 
-interface setting_getFile {
+interface SettingGetFile {
   regExp: RegExp[];
   fileType: string;
-  isGet: boolean
+  isGet: boolean;
 }
-interface userSetting {
-  getFile: setting_getFile[]
+interface UserSetting {
+  getFile: SettingGetFile[];
 }
 
 class GetFolderStructure {
-  constructor(basePath: string, userSetting?: userSetting) {
+  constructor(basePath: string, userSetting?: UserSetting) {
     this.basePath = basePath
     this.userSetting = { ...this.userSetting, ...userSetting }
   }
 
-  private basePath: string;
-  getFile: setting_getFile[] =
+  private basePath: string
+  getFile: SettingGetFile[] =
     [
       {
         fileType: 'video',
@@ -53,10 +54,13 @@ class GetFolderStructure {
         regExp: [/swf$|exe$/i]
       }
     ]
-  userSetting: userSetting = { getFile: [] }
+
+  userSetting: UserSetting = { getFile: [] }
+
+  readonly dirList: string[] = []
 
   fileTypeCheck(fileName: string): { isGet: boolean, type: string } {
-    let getFileSetting = [
+    const getFileSetting = [
       ...this.userSetting.getFile,
       ...this.getFile
     ]
@@ -84,9 +88,9 @@ class GetFolderStructure {
   }
 
   promise_readFolderStructure() {
-    const readdir = async (readPath: string, prevPath?: string) => {
+    const readdir = async (readPath: string) => {
       let listStrings: string[] = []
-      let result: oneDirReadResult_all = { nowPath: readPath, dir: [], file: [], existType: [] }
+      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], existType: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -99,18 +103,26 @@ class GetFolderStructure {
         let nowStat = await fs.promises.stat(nowPath)
 
         if (nowStat.isDirectory()) {
+          this.dirList.push(nowPath)
           result.dir.push(await readdir(nowPath))
         } else {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
+
           result.file.push(
             {
               fileName: listString,
               fileType: fileTypeResult.type,
               ctime: nowStat.ctime,
-              mtime: nowStat.mtime,
+              mtime: nowStat.mtime
             }
           )
+          if (fileTypeResult.type === 'game') {
+            // if game folder, ignore other files except match RegExp as game file
+            result.file = [result.file[result.file.length - 1]]
+            return result
+          }
+
           if (!result.existType.includes(fileTypeResult.type)) {
             result.existType.push(fileTypeResult.type)
           }
