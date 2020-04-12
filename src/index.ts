@@ -22,14 +22,37 @@ interface SettingGetFile {
   fileType: string;
   isGet: boolean;
 }
-interface UserSetting {
-  getFile: SettingGetFile[];
-}
 
 class GetFolderStructure {
-  constructor(basePath: string, userSetting?: UserSetting) {
+  constructor(
+    basePath: string,
+    userSetting: {
+      changeDefaultGetFile: {
+        fileType: string,
+        replace: {
+          regExp?: RegExp[];
+          fileType?: string;
+          isGet?: boolean;
+        }
+      }[],
+      getFile: SettingGetFile[]
+    } = { changeDefaultGetFile: [], getFile: [] }
+  ) {
     this.basePath = basePath
-    this.userSetting = { ...this.userSetting, ...userSetting }
+
+    // chagne default setting
+    userSetting.changeDefaultGetFile.forEach(item => {
+      for (let i = 0; i < this.getFile.length; i++) {
+        const getFile = this.getFile[i]
+        if (getFile.fileType === item.fileType) {
+          this.getFile[i] = { ...this.getFile[i], ...item.replace }
+          break
+        }
+      }
+    })
+
+    // insert user.getFileSetting
+    this.getFile = [...this.getFile, ...userSetting.getFile]
   }
 
   private basePath: string
@@ -57,15 +80,8 @@ class GetFolderStructure {
       }
     ]
 
-  userSetting: UserSetting = { getFile: [] }
-
-  readonly dirList: string[] = []
-
   fileTypeCheck(fileName: string): { isGet: boolean, type: string } {
-    const getFileSetting = [
-      ...this.userSetting.getFile,
-      ...this.getFile
-    ]
+    const getFileSetting = this.getFile
 
     let result = {
       type: '',
@@ -105,7 +121,6 @@ class GetFolderStructure {
         let nowStat = await fs.promises.stat(nowPath)
 
         if (nowStat.isDirectory()) {
-          this.dirList.push(nowPath)
           result.dir.push(await readdir(nowPath))
         } else {
           let fileTypeResult = this.fileTypeCheck(listString)
