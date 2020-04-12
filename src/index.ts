@@ -12,9 +12,11 @@ interface OneDirReadResultAll {
   nowPath: string;
   dir: OneDirReadResultAll[];
   file: FileResult[];
-  existType: string[];
+  overall: {
+    type: string,
+    count: number
+  }[]
 }
-
 interface SettingGetFile {
   regExp: RegExp[];
   fileType: string;
@@ -90,7 +92,7 @@ class GetFolderStructure {
   promise_readFolderStructure() {
     const readdir = async (readPath: string) => {
       let listStrings: string[] = []
-      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], existType: [] }
+      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -117,14 +119,22 @@ class GetFolderStructure {
               mtime: nowStat.mtime
             }
           )
+
+          const checkOverall = result.overall.filter(item => item.type === fileTypeResult.type)
+          if (!checkOverall.length) result.overall.push({ type: fileTypeResult.type, count: 1 })
+          else {
+            result.overall = result.overall.map(item => {
+              if (item.type === fileTypeResult.type) ++item.count
+              return item
+            })
+          }
+
           if (fileTypeResult.type === 'game') {
             // if game folder, ignore other files except match RegExp as game file
             result.file = [result.file[result.file.length - 1]]
+            result.dir = []
+            result.overall = [{ type: 'game', count: 1 }]
             return result
-          }
-
-          if (!result.existType.includes(fileTypeResult.type)) {
-            result.existType.push(fileTypeResult.type)
           }
         }
       }
