@@ -61,7 +61,7 @@ class GetFolderStructure {
       {
         fileType: 'video',
         isGet: true,
-        regExp: [/MPE?G$|MP(2|E|V)$/i, /ogg$/i, /webm$/i, /m4(p|v)$|mp4$/i, /avi$|wmv$|mov$|qt$|flv$|swf$/i]
+        regExp: [/MPE?G$|MP(2|E|V)$/i, /ogg$/i, /webm$/i, /m4(p|v)$|mp4$/i, /avi$|wmv$|mov$|qt$|flv$|swf$|mkv$/i]
       },
       {
         fileType: 'audio',
@@ -131,19 +131,19 @@ class GetFolderStructure {
             type: childDir.overall.map(item => item.type),
             count: childDir.overall.map(item => item.count)
           }
-          const parentDirOverallArray = {
+          let parentDirOverallArray = {
             type: result.overall.map(item => item.type),
             count: result.overall.map(item => item.count)
           }
 
           let parentChangeArrayIndex: number[] = []
-          childDirOverallArray.type.forEach(type => {
-            const index = parentDirOverallArray.type.indexOf(type)
-            if (index !== -1) {
-              parentChangeArrayIndex.push(index)
-              parentDirOverallArray.count[index] += childDirOverallArray.count[index]
+          childDirOverallArray.type.forEach((type, nowIndex) => {
+            const fIndex = parentDirOverallArray.type.indexOf(type)
+            if (fIndex !== -1) {
+              parentChangeArrayIndex.push(fIndex)
+              parentDirOverallArray.count[fIndex] += childDirOverallArray.count[fIndex]
             } else {
-              result.overall.push(childDir.overall[index])
+              result.overall.push(childDir.overall[nowIndex])
             }
           })
 
