@@ -109,21 +109,28 @@ class GetFolderStructure {
   promise_readFolderStructure(resultFolderDepth: number = -1) {
     const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll>  => {
       const overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
-        const parentMap = {
+        let parentMap = {
           type: parent.map(item => item.type),
           count: parent.map(item => item.count)
         }
-        let result = parent
 
         child.forEach(item => {
           const typeIndex = parentMap.type.indexOf(item.type)
           if (typeIndex !== -1) {
-            result[typeIndex].count += item.count
+            parentMap.count[typeIndex] += item.count
           } else {
-            result.push(item)
+            parentMap.count.push(item.count)
+            parentMap.type.push(item.type)
           }
         })
 
+        let result = []
+        parentMap.type.forEach((item, index) => {
+          result[index] = {
+            type: item,
+            count: parentMap.count[index]
+          }
+        })
         return result
       }
 
