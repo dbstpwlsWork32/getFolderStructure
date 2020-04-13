@@ -8,14 +8,15 @@ interface FileResult {
   ctime: Date;
   mtime: Date;
 }
+interface overall {
+  type: string,
+  count: number
+}
 interface OneDirReadResultAll {
   nowPath: string;
   dir: OneDirReadResultAll[];
   file: FileResult[];
-  overall: {
-    type: string,
-    count: number
-  }[]
+  overall: overall[]
 }
 interface SettingGetFile {
   regExp: RegExp[];
@@ -112,6 +113,25 @@ class GetFolderStructure {
       let listStrings: string[] = []
       let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
 
+      let overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
+        const parentMap = {
+          type: parent.map(item => item.type),
+          count: parent.map(item => item.count)
+        }
+        let result = parent
+
+        child.forEach(item => {
+          const typeIndex = parentMap.type.indexOf(item.type)
+          if (typeIndex !== -1) {
+            result[typeIndex].count += item.count
+          } else {
+            result.push(item)
+          }
+        })
+
+        return result
+      }
+
       try {
         listStrings = await fs.promises.readdir(readPath)
       } catch (err) {
@@ -126,30 +146,7 @@ class GetFolderStructure {
           const childDir = await readdir(nowPath, basePath)
           result.dir.push(childDir)
 
-          // add childFolder overall with nowDir overall
-          const childDirOverallArray = {
-            type: childDir.overall.map(item => item.type),
-            count: childDir.overall.map(item => item.count)
-          }
-          let parentDirOverallArray = {
-            type: result.overall.map(item => item.type),
-            count: result.overall.map(item => item.count)
-          }
-
-          let parentChangeArrayIndex: number[] = []
-          childDirOverallArray.type.forEach((type, nowIndex) => {
-            const fIndex = parentDirOverallArray.type.indexOf(type)
-            if (fIndex !== -1) {
-              parentChangeArrayIndex.push(fIndex)
-              parentDirOverallArray.count[fIndex] += childDirOverallArray.count[nowIndex]
-            } else {
-              result.overall.push(childDir.overall[nowIndex])
-            }
-          })
-
-          parentChangeArrayIndex.forEach(index => {
-            result.overall[index].count = parentDirOverallArray.count[index]
-          })
+          result.overall = overallAddByFolder(result.overall, childDir.overall)
         } else {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
