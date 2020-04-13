@@ -106,14 +106,9 @@ class GetFolderStructure {
     return result
   }
 
-  promise_readFolderStructure() {
-    const readdir = async (readPath: string, basePath: string) => {
-      if ((readPath.split(path.sep).length - basePath.split(path.sep).length) >= 15) throw new Error('File size is too larg')
-
-      let listStrings: string[] = []
-      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
-
-      let overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
+  promise_readFolderStructure(resultFolderDepth: number = -1) {
+    const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll>  => {
+      const overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
         const parentMap = {
           type: parent.map(item => item.type),
           count: parent.map(item => item.count)
@@ -132,22 +127,23 @@ class GetFolderStructure {
         return result
       }
 
+      if ((readPath.split(path.sep).length - rootPath.split(path.sep).length) >= 15) throw new Error('File size is too larg')
+
+      let listStrings: string[] = []
+      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
+
       try {
         listStrings = await fs.promises.readdir(readPath)
       } catch (err) {
         throw new Error(`first find error ${readPath}\n${err}`)
       }
 
+      const nowFolderChildDir = []
       for (const listString of listStrings) {
         let nowPath = path.resolve(readPath, listString)
         let nowStat = await fs.promises.stat(nowPath)
 
-        if (nowStat.isDirectory()) {
-          const childDir = await readdir(nowPath, basePath)
-          result.dir.push(childDir)
-
-          result.overall = overallAddByFolder(result.overall, childDir.overall)
-        } else {
+        if (!nowStat.isDirectory()) {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
 
@@ -176,7 +172,15 @@ class GetFolderStructure {
             result.overall = [{ type: 'game', count: 1 }]
             return result
           }
+        } else {
+          nowFolderChildDir.push(nowPath)
         }
+      }
+
+      for (const nowPath of nowFolderChildDir) {
+        const childDir = await readdir(nowPath, rootPath)
+        result.dir.push(childDir)
+        result.overall = overallAddByFolder(result.overall, childDir.overall)
       }
       return result
     }
