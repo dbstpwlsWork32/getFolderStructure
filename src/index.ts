@@ -76,7 +76,7 @@ class GetFolderStructure {
       {
         fileType: 'game',
         isGet: true,
-        regExp: [/swf$|exe$/i]
+        regExp: [/exe$/i]
       }
     ]
 
