@@ -106,8 +106,8 @@ class GetFolderStructure {
   }
 
   promise_readFolderStructure() {
-    const readdir = async (readPath: string, nowDepth: number = 0) => {
-      if (nowDepth >= 15) throw new Error('File size is too larg')
+    const readdir = async (readPath: string, basePath: string) => {
+      if ((readPath.split(path.sep).length - basePath.split(path.sep).length) >= 15) throw new Error('File size is too larg')
 
       let listStrings: string[] = []
       let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
@@ -123,7 +123,7 @@ class GetFolderStructure {
         let nowStat = await fs.promises.stat(nowPath)
 
         if (nowStat.isDirectory()) {
-          const childDir = await readdir(nowPath, nowDepth++)
+          const childDir = await readdir(nowPath, basePath)
           result.dir.push(childDir)
 
           // add childFolder overall with nowDir overall
@@ -141,7 +141,7 @@ class GetFolderStructure {
             const fIndex = parentDirOverallArray.type.indexOf(type)
             if (fIndex !== -1) {
               parentChangeArrayIndex.push(fIndex)
-              parentDirOverallArray.count[fIndex] += childDirOverallArray.count[fIndex]
+              parentDirOverallArray.count[fIndex] += childDirOverallArray.count[nowIndex]
             } else {
               result.overall.push(childDir.overall[nowIndex])
             }
@@ -184,7 +184,7 @@ class GetFolderStructure {
       return result
     }
 
-    return readdir(this.basePath)
+    return readdir(this.basePath, this.basePath)
   }
 }
 
