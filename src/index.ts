@@ -106,7 +106,9 @@ class GetFolderStructure {
   }
 
   promise_readFolderStructure() {
-    const readdir = async (readPath: string) => {
+    const readdir = async (readPath: string, nowDepth: number = 0) => {
+      if (nowDepth >= 15) throw new Error('File size is too larg')
+
       let listStrings: string[] = []
       let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
 
@@ -121,7 +123,33 @@ class GetFolderStructure {
         let nowStat = await fs.promises.stat(nowPath)
 
         if (nowStat.isDirectory()) {
-          result.dir.push(await readdir(nowPath))
+          const childDir = await readdir(nowPath, nowDepth++)
+          result.dir.push(childDir)
+
+          // add childFolder overall with nowDir overall
+          const childDirOverallArray = {
+            type: childDir.overall.map(item => item.type),
+            count: childDir.overall.map(item => item.count)
+          }
+          const parentDirOverallArray = {
+            type: result.overall.map(item => item.type),
+            count: result.overall.map(item => item.count)
+          }
+
+          let parentChangeArrayIndex: number[] = []
+          childDirOverallArray.type.forEach(type => {
+            const index = parentDirOverallArray.type.indexOf(type)
+            if (index !== -1) {
+              parentChangeArrayIndex.push(index)
+              parentDirOverallArray.count[index] += childDirOverallArray.count[index]
+            } else {
+              result.overall.push(childDir.overall[index])
+            }
+          })
+
+          parentChangeArrayIndex.forEach(index => {
+            result.overall[index].count = parentDirOverallArray.count[index]
+          })
         } else {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
