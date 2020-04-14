@@ -106,7 +106,7 @@ class GetDirStructure {
     return result
   }
 
-  promise_readDirStructure(): Promise<OneDirReadResultAll[]> {
+  promise_readDirStructure(divideAsFolderDepth: boolean = false): Promise<OneDirReadResultAll[]> {
     const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll[]>  => {
       const overallAddByDir = (parent: overall[], child: overall[]): overall[] => {
         let parentMap = {
@@ -134,10 +134,10 @@ class GetDirStructure {
         return overallResult
       }
 
-      if ((readPath.split(path.sep).length - rootPath.split(path.sep).length) >= 15) throw new Error('File size is too larg')
+      if ((readPath.split(path.sep).length - rootPath.split(path.sep).length) >= 15) throw new Error('File size is too big')
 
       let listStrings: string[] = []
-      let OneDirReadResult: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
+      let oneDirReadResult: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -154,7 +154,7 @@ class GetDirStructure {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
 
-          OneDirReadResult.file.push(
+          oneDirReadResult.file.push(
             {
               fileName: listString,
               fileType: fileTypeResult.type,
@@ -163,27 +163,42 @@ class GetDirStructure {
             }
           )
 
-          OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
+          oneDirReadResult.overall = overallAddByDir(oneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
 
           if (fileTypeResult.type === 'game') {
             // if game Dir, ignore other files except match RegExp as game file
-            OneDirReadResult.file = [OneDirReadResult.file[OneDirReadResult.file.length - 1]]
-            OneDirReadResult.dir = []
-            OneDirReadResult.overall = [{ type: 'game', count: 1 }]
-            return [OneDirReadResult]
+            oneDirReadResult.file = [oneDirReadResult.file[oneDirReadResult.file.length - 1]]
+            oneDirReadResult.dir = []
+            oneDirReadResult.overall = [{ type: 'game', count: 1 }]
+            return [oneDirReadResult]
           }
         } else {
           nowDirChildDir.push(nowPath)
         }
       }
 
+      let divideFolderResult: OneDirReadResultAll[] = []
       for (const childDirPath of nowDirChildDir) {
         const childDir = await readdir(childDirPath, rootPath)
-        OneDirReadResult.dir.push(...childDir)
-        OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, childDir[0].overall)
+        if (divideAsFolderDepth) {
+          oneDirReadResult.dir.push(childDirPath)
+          divideFolderResult.push(...childDir)
+
+          let addAllChildOverall: overall[] = []
+          for (const childDirResult of childDir) {
+            if (childDirResult.nowPath.split(path.sep).length - readPath.split(path.sep).length === 1) {
+              addAllChildOverall = overallAddByDir(childDirResult.overall, addAllChildOverall)
+            }
+          }
+          oneDirReadResult.overall = overallAddByDir(oneDirReadResult.overall, addAllChildOverall)
+        } else {
+          oneDirReadResult.dir.push(...childDir)
+          oneDirReadResult.overall = overallAddByDir(oneDirReadResult.overall, childDir[0].overall)
+        }
       }
 
-      return [OneDirReadResult]
+      if (divideAsFolderDepth) return [...divideFolderResult, oneDirReadResult]
+      else return [oneDirReadResult]
     }
 
     return readdir(this.basePath, this.basePath)
@@ -193,32 +208,60 @@ class GetDirStructure {
 export default GetDirStructure
 
 /*
-  this.promise_readDirStructure(depth: number = -1)
-      -1 => result.dir contain all sub directory
+  this.promise_readDirStructure(divideAsFolderDepth: boolean = false)
+      -1 => result contain all sub directory
 
   EX)
-    /a
-    /b
-      /c
-        /d
-      /e
+    READ_ROOTFOLDER/
+      /a
+      /b
+        /c
 
-    depth == 1
+    divideAsFolderDepth === false (default)
     =>
-    [
-      {nowPath: '/a'},
-      {nowPath: '/b'},
-      {nowPath: '/b/c'},
-      {nowPath: '/b/c/d'},
-      {nowPath: '/b/e'}
+    [{
+        ...,
+        dir: [
+          {
+            ...,
+            nowPath: '/a',
+            dir: []
+          },
+          {
+            ...,
+            nowPath: '/b',
+            dir: [
+              {
+                ...,
+                nowPath: '/b/c'
+              }
+            ]
+          },
+        ]
+      }
     ]
 
-    depth == 2
+    divideAsFolderDepth === true
     =>
     [
-      {nowPath: '/a'},
-      {nowPath: '/b'},
-      {nowPath: '/b/c', dir : [{nowpath: '/b/c/d'}]},
-      {nowPath: '/b/e'}
+      {
+        ...,
+        dir: [{nowPath: '/a'}, {nowPath: '/b'}]
+      },
+      {
+        ...,
+        nowPath: '/a'
+        dir: []
+      },
+      {
+        ...,
+        nowPath: '/b',
+        dir: [{nowPath: '/b/c'}]
+      },
+      {
+        ...,
+        nowPath: '/b/c'
+        dir: []
+      }
     ]
 */
