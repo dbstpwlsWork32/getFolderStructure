@@ -163,14 +163,7 @@ class GetFolderStructure {
             }
           )
 
-          const checkOverall = OneDirReadResult.overall.filter(item => item.type === fileTypeResult.type)
-          if (!checkOverall.length) OneDirReadResult.overall.push({ type: fileTypeResult.type, count: 1 })
-          else {
-            OneDirReadResult.overall = OneDirReadResult.overall.map(item => {
-              if (item.type === fileTypeResult.type) ++item.count
-              return item
-            })
-          }
+          OneDirReadResult.overall = overallAddByFolder(OneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
 
           if (fileTypeResult.type === 'game') {
             // if game folder, ignore other files except match RegExp as game file
