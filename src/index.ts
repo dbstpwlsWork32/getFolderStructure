@@ -14,7 +14,7 @@ interface overall {
 }
 interface OneDirReadResultAll {
   nowPath: string;
-  dir: OneDirReadResultAll[];
+  dir: OneDirReadResultAll[] & string[];
   file: FileResult[];
   overall: overall[]
 }
@@ -106,7 +106,7 @@ class GetFolderStructure {
     return result
   }
 
-  promise_readFolderStructure(resultFolderDepth: number = -1) {
+  promise_readFolderStructure() {
     const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll>  => {
       const overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
         let parentMap = {
@@ -124,20 +124,20 @@ class GetFolderStructure {
           }
         })
 
-        let result = []
+        let overallResult:overall[] = []
         parentMap.type.forEach((item, index) => {
-          result[index] = {
+          overallResult[index] = {
             type: item,
             count: parentMap.count[index]
           }
         })
-        return result
+        return overallResult
       }
 
       if ((readPath.split(path.sep).length - rootPath.split(path.sep).length) >= 15) throw new Error('File size is too larg')
 
       let listStrings: string[] = []
-      let result: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
+      let OneDirReadResult: OneDirReadResultAll = { nowPath: readPath, dir: [], file: [], overall: [] }
 
       try {
         listStrings = await fs.promises.readdir(readPath)
@@ -154,7 +154,7 @@ class GetFolderStructure {
           let fileTypeResult = this.fileTypeCheck(listString)
           if (!fileTypeResult.isGet) continue
 
-          result.file.push(
+          OneDirReadResult.file.push(
             {
               fileName: listString,
               fileType: fileTypeResult.type,
@@ -163,10 +163,10 @@ class GetFolderStructure {
             }
           )
 
-          const checkOverall = result.overall.filter(item => item.type === fileTypeResult.type)
-          if (!checkOverall.length) result.overall.push({ type: fileTypeResult.type, count: 1 })
+          const checkOverall = OneDirReadResult.overall.filter(item => item.type === fileTypeResult.type)
+          if (!checkOverall.length) OneDirReadResult.overall.push({ type: fileTypeResult.type, count: 1 })
           else {
-            result.overall = result.overall.map(item => {
+            OneDirReadResult.overall = OneDirReadResult.overall.map(item => {
               if (item.type === fileTypeResult.type) ++item.count
               return item
             })
@@ -174,10 +174,10 @@ class GetFolderStructure {
 
           if (fileTypeResult.type === 'game') {
             // if game folder, ignore other files except match RegExp as game file
-            result.file = [result.file[result.file.length - 1]]
-            result.dir = []
-            result.overall = [{ type: 'game', count: 1 }]
-            return result
+            OneDirReadResult.file = [OneDirReadResult.file[OneDirReadResult.file.length - 1]]
+            OneDirReadResult.dir = []
+            OneDirReadResult.overall = [{ type: 'game', count: 1 }]
+            return OneDirReadResult
           }
         } else {
           nowFolderChildDir.push(nowPath)
@@ -186,10 +186,11 @@ class GetFolderStructure {
 
       for (const nowPath of nowFolderChildDir) {
         const childDir = await readdir(nowPath, rootPath)
-        result.dir.push(childDir)
-        result.overall = overallAddByFolder(result.overall, childDir.overall)
+        OneDirReadResult.dir.push(childDir)
+        OneDirReadResult.overall = overallAddByFolder(OneDirReadResult.overall, childDir.overall)
       }
-      return result
+
+      return OneDirReadResult
     }
 
     return readdir(this.basePath, this.basePath)
@@ -197,3 +198,34 @@ class GetFolderStructure {
 }
 
 export default GetFolderStructure
+
+/*
+  this.promise_readFolderStructure(depth: number = -1)
+      -1 => result.dir contain all sub directory
+
+  EX)
+    /a
+    /b
+      /c
+        /d
+      /e
+
+    depth == 1
+    =>
+    [
+      {nowPath: '/a'},
+      {nowPath: '/b'},
+      {nowPath: '/b/c'},
+      {nowPath: '/b/c/d'},
+      {nowPath: '/b/e'}
+    ]
+
+    depth == 2
+    =>
+    [
+      {nowPath: '/a'},
+      {nowPath: '/b'},
+      {nowPath: '/b/c', dir : [{nowpath: '/b/c/d'}]},
+      {nowPath: '/b/e'}
+    ]
+*/
