@@ -106,8 +106,8 @@ class GetDirStructure {
     return result
   }
 
-  promise_readDirStructure(): Promise<OneDirReadResultAll> {
-    const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll>  => {
+  promise_readDirStructure(): Promise<OneDirReadResultAll[]> {
+    const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll[]>  => {
       const overallAddByDir = (parent: overall[], child: overall[]): overall[] => {
         let parentMap = {
           type: parent.map(item => item.type),
@@ -170,7 +170,7 @@ class GetDirStructure {
             OneDirReadResult.file = [OneDirReadResult.file[OneDirReadResult.file.length - 1]]
             OneDirReadResult.dir = []
             OneDirReadResult.overall = [{ type: 'game', count: 1 }]
-            return OneDirReadResult
+            return [OneDirReadResult]
           }
         } else {
           nowDirChildDir.push(nowPath)
@@ -179,11 +179,11 @@ class GetDirStructure {
 
       for (const childDirPath of nowDirChildDir) {
         const childDir = await readdir(childDirPath, rootPath)
-        OneDirReadResult.dir.push(childDir)
-        OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, childDir.overall)
+        OneDirReadResult.dir.push(...childDir)
+        OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, childDir[0].overall)
       }
 
-      return OneDirReadResult
+      return [OneDirReadResult]
     }
 
     return readdir(this.basePath, this.basePath)
