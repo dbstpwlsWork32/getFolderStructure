@@ -24,7 +24,7 @@ interface SettingGetFile {
   isGet: boolean;
 }
 
-class GetFolderStructure {
+class GetDirStructure {
   constructor(
     basePath: string,
     userSetting: {
@@ -106,9 +106,9 @@ class GetFolderStructure {
     return result
   }
 
-  promise_readFolderStructure() {
+  promise_readDirStructure(): Promise<OneDirReadResultAll> {
     const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll>  => {
-      const overallAddByFolder = (parent: overall[], child: overall[]): overall[] => {
+      const overallAddByDir = (parent: overall[], child: overall[]): overall[] => {
         let parentMap = {
           type: parent.map(item => item.type),
           count: parent.map(item => item.count)
@@ -145,7 +145,7 @@ class GetFolderStructure {
         throw new Error(`first find error ${readPath}\n${err}`)
       }
 
-      const nowFolderChildDir = []
+      const nowDirChildDir = []
       for (const listString of listStrings) {
         let nowPath = path.resolve(readPath, listString)
         let nowStat = await fs.promises.stat(nowPath)
@@ -163,24 +163,24 @@ class GetFolderStructure {
             }
           )
 
-          OneDirReadResult.overall = overallAddByFolder(OneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
+          OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
 
           if (fileTypeResult.type === 'game') {
-            // if game folder, ignore other files except match RegExp as game file
+            // if game Dir, ignore other files except match RegExp as game file
             OneDirReadResult.file = [OneDirReadResult.file[OneDirReadResult.file.length - 1]]
             OneDirReadResult.dir = []
             OneDirReadResult.overall = [{ type: 'game', count: 1 }]
             return OneDirReadResult
           }
         } else {
-          nowFolderChildDir.push(nowPath)
+          nowDirChildDir.push(nowPath)
         }
       }
 
-      for (const nowPath of nowFolderChildDir) {
-        const childDir = await readdir(nowPath, rootPath)
+      for (const childDirPath of nowDirChildDir) {
+        const childDir = await readdir(childDirPath, rootPath)
         OneDirReadResult.dir.push(childDir)
-        OneDirReadResult.overall = overallAddByFolder(OneDirReadResult.overall, childDir.overall)
+        OneDirReadResult.overall = overallAddByDir(OneDirReadResult.overall, childDir.overall)
       }
 
       return OneDirReadResult
@@ -190,10 +190,10 @@ class GetFolderStructure {
   }
 }
 
-export default GetFolderStructure
+export default GetDirStructure
 
 /*
-  this.promise_readFolderStructure(depth: number = -1)
+  this.promise_readDirStructure(depth: number = -1)
       -1 => result.dir contain all sub directory
 
   EX)
