@@ -62,7 +62,7 @@ class GetDirStructure {
       {
         fileType: 'video',
         isGet: true,
-        regExp: [/MPE?G$|MP(2|E|V)$/i, /ogg$/i, /webm$/i, /m4(p|v)$|mp4$/i, /avi$|wmv$|mov$|qt$|flv$|swf$|mkv$/i]
+        regExp: [/MPE?G$|MP(2|E|V)$/i, /ogg$/i, /webm$/i, /m4(p|v)$|mp4$/i, /avi$|wmv$|mov$|qt$|flv$|mkv$/i]
       },
       {
         fileType: 'audio',
@@ -77,7 +77,7 @@ class GetDirStructure {
       {
         fileType: 'game',
         isGet: true,
-        regExp: [/exe$/i]
+        regExp: [/exe$|swf$/i]
       }
     ]
 
@@ -107,7 +107,7 @@ class GetDirStructure {
   }
 
   promise_readDirStructure(divideAsFolderDepth: boolean = false): Promise<OneDirReadResultAll[]> {
-    const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll[]>  => {
+    const readdir = async (readPath: string, rootPath: string): Promise<OneDirReadResultAll[]> => {
       const overallAddByDir = (parent: overall[], child: overall[]): overall[] => {
         let parentMap = {
           type: parent.map(item => item.type),
@@ -124,7 +124,7 @@ class GetDirStructure {
           }
         })
 
-        let overallResult:overall[] = []
+        let overallResult: overall[] = []
         parentMap.type.forEach((item, index) => {
           overallResult[index] = {
             type: item,
@@ -163,9 +163,9 @@ class GetDirStructure {
             }
           )
 
-          oneDirReadResult.overall = overallAddByDir(oneDirReadResult.overall, [{type: fileTypeResult.type, count: 1}])
+          oneDirReadResult.overall = overallAddByDir(oneDirReadResult.overall, [{ type: fileTypeResult.type, count: 1 }])
 
-          if (fileTypeResult.type === 'game') {
+          if (fileTypeResult.type === 'game' && !path.parse(listString).ext.match(/swf$/)) {
             // if game Dir, ignore other files except match RegExp as game file
             oneDirReadResult.file = [oneDirReadResult.file[oneDirReadResult.file.length - 1]]
             oneDirReadResult.dir = []
@@ -264,4 +264,7 @@ export default GetDirStructure
         dir: []
       }
     ]
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // root dir result always place last item of result array
 */
